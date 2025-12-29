@@ -81,39 +81,40 @@ function ResultadosContent() {
   }, []);
   // Cargar Puntos Iniciales
   useEffect(() => {
-    if (!mounted) return;
-    const loadPuntos = async () => {
-      const { data } = await supabase
-        .from("terminales")
-        .select(`id, nombre_terminal, alias_terminal, ciudades(nombre_ciudad)`);
+  if (!mounted) return;
+  const loadPuntos = async () => {
+    const { data } = await supabase
+      .from("terminales")
+      .select(`id, nombre_terminal, alias_terminal, ciudades(nombre_ciudad)`);
 
-      if (data) {
-        const puntosData = data.map((t: any) => ({
-          id: t.id,
-          alias: t.alias_terminal,
-          ciudad: t.ciudades?.nombre_ciudad || "",
-          nombreReal: t.nombre_terminal,
-        }));
-        setPuntos(puntosData);
+    if (data) {
+      const puntosData = data.map((t: any) => ({
+        id: t.id,
+        alias: t.alias_terminal,
+        ciudad: t.ciudades?.nombre_ciudad || "",
+        nombreReal: t.nombre_terminal,
+      }));
+      setPuntos(puntosData);
 
-        if (origenIdParam) {
-          const o = puntosData.find((p) => p.id === parseInt(origenIdParam));
-          if (o) {
-            setQueryOrigen(o.alias ? `${o.ciudad} (${o.alias})` : o.ciudad);
-            setIdOrigen(o.id);
-          }
-        }
-        if (destinoIdParam) {
-          const d = puntosData.find((p) => p.id === parseInt(destinoIdParam));
-          if (d) {
-            setQueryDestino(d.alias ? `${d.ciudad} (${d.alias})` : d.ciudad);
-            setIdDestino(d.id);
-          }
+      // PRIMERO ACTUALIZAMOS LOS IDS, LUEGO LOS QUERYS
+      if (origenIdParam) {
+        const o = puntosData.find((p) => p.id === parseInt(origenIdParam));
+        if (o) {
+          setIdOrigen(o.id);
+          setQueryOrigen(o.alias ? `${o.ciudad} (${o.alias})` : o.ciudad);
         }
       }
-    };
-    loadPuntos();
-  }, [origenIdParam, destinoIdParam]);
+      if (destinoIdParam) {
+        const d = puntosData.find((p) => p.id === parseInt(destinoIdParam));
+        if (d) {
+          setIdDestino(d.id);
+          setQueryDestino(d.alias ? `${d.ciudad} (${d.alias})` : d.ciudad);
+        }
+      }
+    }
+  };
+  loadPuntos();
+}, [mounted]);
 
   // Cargar Resultados
   useEffect(() => {
