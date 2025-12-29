@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Horarios buses Ecuador",
-  description: "Horarios de buses en Ecuador",
+  title: "Rutas Ecuador | Horarios de Buses", // <--- Este es el nombre de la pestaña
+  description: "Consulta horarios y frecuencias de transporte en Ecuador",
 };
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
