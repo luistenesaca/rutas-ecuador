@@ -202,14 +202,14 @@ export default function HomePage() {
 
       <main className="pt-20">
         {/* HERO SECTION */}
-        <section className="relative bg-[#09184D] pt-24 pb-40 md:pt-32 md:pb-56 px-6 overflow-hidden">
+        <section className="relative bg-[#09184D] pt-24 pb-40 md:pt-32 md:pb-56 px-6 overflow-x-clip">
           <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
             <div className="absolute top-[10%] left-[15%] w-2 h-2 bg-[#EA2264] rounded-full animate-pulse blur-[1px]" />
             <div className="absolute top-[40%] left-[80%] w-3 h-3 bg-blue-400 rounded-full animate-bounce blur-[2px] delay-700" />
             <div className="absolute top-[70%] left-[30%] w-1.5 h-1.5 bg-white rounded-full animate-pulse delay-500" />
           </div>
 
-          <div className="max-w-5xl mx-auto relative z-10">
+          <div className="max-w-5xl mx-auto relative z-30">
             <div className="text-center mb-16 space-y-4">
               <h2 className="text-white text-5xl md:text-7xl font-black mb-6 tracking-tighter leading-tight">
                 Viaja por todo <br />

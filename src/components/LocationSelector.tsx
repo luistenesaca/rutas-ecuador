@@ -44,7 +44,10 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
     const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
       // Si el clic NO está dentro del contenedor (input + dropdown), cerramos
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setShowSuggestions(false);
       }
     };
@@ -75,7 +78,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     return query;
   };
 
-  // Lógica de Sugerencias Mejorada
+  // Lógica de Sugerencias
   const { suggestions, isPopular } = useMemo(() => {
     // Si NO hay búsqueda (query vacío), mostrar ciudades populares
     if (query.length === 0) {
@@ -117,7 +120,11 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   };
 
   return (
-    <div className="relative flex-1" ref={containerRef}> {/* El ref ya está aquí, perfecto */}
+    <div
+      className={`relative flex-1 ${showSuggestions ? "z-[100]" : "z-10"}`}
+      ref={containerRef}
+    >
+      {" "}
       {/* Input principal */}
       <div
         className="flex items-center gap-3 p-2 md:px-8 hover:bg-gray-50 rounded-[2rem] md:rounded-full transition-colors cursor-text"
@@ -135,13 +142,12 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
             value={getInputValue()}
             onChange={(e) => {
               setQuery(e.target.value);
-              setShowSuggestions(true); // Asegura que se abra al escribir
+              setShowSuggestions(true);
             }}
             onFocus={handleInputActivation}
           />
         </div>
       </div>
-
       {/* Dropdown con Sugerencias Populares */}
       {showSuggestions && (
         <div className="absolute top-full left-0 right-0 mt-3 z-50 md:left-4 md:right-auto md:w-96 dropdown-suggestions">
