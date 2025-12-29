@@ -18,6 +18,8 @@ import {
   Filter,
 } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 // Skeletons
 const ViajeSkeleton = () => (
   <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 animate-pulse mb-6">
