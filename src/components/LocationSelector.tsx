@@ -127,7 +127,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       {" "}
       {/* Input principal */}
       <div
-        className="flex items-center gap-3 p-2 md:px-8 hover:bg-gray-50 rounded-[2rem] md:rounded-full transition-colors cursor-text"
+        className="flex items-center gap-3 p-2 md:px-8 rounded-[2rem] md:rounded-full transition-colors cursor-text"
         onClick={handleInputActivation}
       >
         <Icon className="text-[#EA2264] shrink-0" size={20} />
