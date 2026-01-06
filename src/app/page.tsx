@@ -533,7 +533,7 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-<div
+            <div
               className="md:col-span-5 group relative overflow-hidden rounded-[2.5rem] cursor-pointer"
               onClick={() => handleDestinoClick(100, "Huaquillas")} // Ajusta el ID real de terminal principal de Huaquillas
             >
@@ -566,14 +566,12 @@ export default function HomePage() {
                 <h3 className="text-white text-4xl font-black tracking-tighter mb-2">
                   Manta
                 </h3>
-                
+
                 <p className="text-blue-100/70 text-xs font-medium">
                   Puerto vibrante y playas infinitas.
                 </p>
               </div>
             </div>
-
-            
           </div>
         </section>
       </main>
