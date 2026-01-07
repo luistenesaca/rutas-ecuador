@@ -143,7 +143,11 @@ export default function FrecuenciaForm({ mode, id }: FrecuenciaFormProps) {
 
   // 3. Lógica de Guardado (Universal)
   const handleGuardar = async () => {
-    if (!cooperativaId || !denominacionRuta || paradas.some((p) => !p.terminal_id)) {
+    if (
+      !cooperativaId ||
+      !denominacionRuta ||
+      paradas.some((p) => !p.terminal_id)
+    ) {
       alert("⚠️ Completa los campos obligatorios.");
       return;
     }
@@ -165,7 +169,7 @@ export default function FrecuenciaForm({ mode, id }: FrecuenciaFormProps) {
           ])
           .select()
           .single();
-        
+
         if (errorFrec) throw errorFrec;
         frecuenciaIdFinal = data.id;
       } else {
@@ -188,7 +192,7 @@ export default function FrecuenciaForm({ mode, id }: FrecuenciaFormProps) {
           .from("paradas_frecuencia")
           .delete()
           .eq("frecuencia_id", idNumerico);
-        
+
         if (errorDelete) throw errorDelete;
       }
 
@@ -196,14 +200,18 @@ export default function FrecuenciaForm({ mode, id }: FrecuenciaFormProps) {
       const paradasFinales = paradas.map((p) => {
         // Supabase tipo 'time' requiere HH:mm:ss o HH:mm
         // Validamos que la hora no esté vacía
-        if (!p.hora_estimada) throw new Error(`La parada #${p.orden} no tiene hora asignada`);
+        if (!p.hora_estimada)
+          throw new Error(`La parada #${p.orden} no tiene hora asignada`);
 
         return {
           frecuencia_id: frecuenciaIdFinal,
           terminal_id: parseInt(p.terminal_id),
           orden: parseInt(p.orden),
           // Aseguramos que la hora tenga el formato correcto (HH:mm)
-          hora_estimada: p.hora_estimada.length === 5 ? p.hora_estimada : p.hora_estimada.slice(0, 5),
+          hora_estimada:
+            p.hora_estimada.length === 5
+              ? p.hora_estimada
+              : p.hora_estimada.slice(0, 5),
           precio_acumulado: parseFloat(p.precio_acumulado) || 0,
           dia_relativo: parseInt(p.dia_relativo) || 0,
           permite_venta: p.permite_venta !== false,
@@ -220,13 +228,13 @@ export default function FrecuenciaForm({ mode, id }: FrecuenciaFormProps) {
       alert("✅ Registro guardado exitosamente");
       router.push("/admin/dashboard/frecuencias");
       router.refresh(); // Forzar actualización de datos en el listado
-
     } catch (err: any) {
       console.error("DETALLE COMPLETO DEL ERROR:", err);
       // Mensaje más descriptivo según el error de Supabase
-      const msg = err.code === "23503" 
-        ? "Error de clave foránea: Una terminal o cooperativa seleccionada no existe." 
-        : err.message || "Error desconocido al procesar la base de datos";
+      const msg =
+        err.code === "23503"
+          ? "Error de clave foránea: Una terminal o cooperativa seleccionada no existe."
+          : err.message || "Error desconocido al procesar la base de datos";
       alert(`Error: ${msg}`);
     } finally {
       setLoading(false);
@@ -405,9 +413,20 @@ export default function FrecuenciaForm({ mode, id }: FrecuenciaFormProps) {
                     value={
                       activeSearchIndex === i
                         ? filtroParada
-                        : terminales.find(
-                            (t) => t.id.toString() === p.terminal_id
-                          )?.ciudades?.nombre_ciudad || ""
+                        : (() => {
+                            const terminal = terminales.find(
+                              (t) => t.id.toString() === p.terminal_id
+                            );
+                            if (!terminal) return "";
+
+                            const ciudad =
+                              terminal.ciudades?.nombre_ciudad || "";
+                            const alias = terminal.alias_terminal
+                              ? ` (${terminal.alias_terminal})`
+                              : "";
+
+                            return `${ciudad}${alias}`;
+                          })()
                     }
                     onChange={(e) => {
                       setFiltroParada(e.target.value);

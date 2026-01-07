@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner"; // 1. Importar toast
 import {
   Building2,
   Upload,
@@ -32,16 +33,15 @@ export default function CooperativaForm({ id }: { id?: string }) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
-    // Solo intentamos cargar si existe el id y estamos en modo edición
     if (isEdit && id) {
       const loadData = async () => {
-        setFetching(true); // Iniciamos carga visual
+        setFetching(true);
         try {
           const { data, error } = await supabase
             .from("cooperativas")
             .select("*")
-            .eq("id", id) // Filtramos por el ID de la URL
-            .single(); // Queremos un solo registro
+            .eq("id", id)
+            .single();
 
           if (error) throw error;
 
@@ -52,21 +52,20 @@ export default function CooperativaForm({ id }: { id?: string }) {
               telefono: data.telefono || "",
               logo_url: data.logo_url || "",
             });
-            // Si hay logo, lo ponemos en la previsualización
             if (data.logo_url) setImagePreview(data.logo_url);
           }
-        } catch (err) {
-          console.error("Error cargando cooperativa:", err);
+        } catch (err: any) {
+          toast.error("Error al cargar datos", {
+            description: err.message || "No se pudo obtener la información."
+          });
         } finally {
-          setFetching(false); // Quitamos el estado de carga
+          setFetching(false);
         }
       };
-
       loadData();
     }
   }, [id, isEdit]);
 
-  // Limpiar el objeto URL para evitar fugas de memoria
   useEffect(() => {
     return () => {
       if (imagePreview && imagePreview.startsWith("blob:")) {
@@ -86,22 +85,21 @@ export default function CooperativaForm({ id }: { id?: string }) {
         const fileExt = imageFile.name.split(".").pop();
         const cleanName = `${Date.now()}.${fileExt}`;
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("logos-cooperativas")
           .upload(cleanName, imageFile, { upsert: true });
 
         if (uploadError) throw uploadError;
 
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("logos-cooperativas").getPublicUrl(cleanName);
+        const { data: { publicUrl } } = supabase.storage
+          .from("logos-cooperativas")
+          .getPublicUrl(cleanName);
 
         finalLogoUrl = publicUrl;
       }
 
-      // AJUSTE AQUÍ: Eliminamos .toUpperCase()
       const payload = {
-        nombre_cooperativa: formData.nombre_cooperativa.trim(), // Ahora guarda tal cual se escribe
+        nombre_cooperativa: formData.nombre_cooperativa.trim(),
         ruc: formData.ruc.trim(),
         telefono: formData.telefono.trim(),
         logo_url: finalLogoUrl,
@@ -113,11 +111,18 @@ export default function CooperativaForm({ id }: { id?: string }) {
 
       if (error) throw error;
 
+      // 2. Toast de éxito profesional
+      toast.success(isEdit ? "¡Actualización exitosa!" : "¡Cooperativa creada!", {
+        description: `${payload.nombre_cooperativa} ha sido guardada en el sistema.`,
+      });
+
       router.push("/admin/dashboard/cooperativas");
       router.refresh();
     } catch (error: any) {
-      console.error("Error completo:", error);
-      alert("Error: " + (error.message || "Ocurrió un problema"));
+      // 3. Reemplazo del alert por toast.error
+      toast.error("Error al procesar", {
+        description: error.message || "Ocurrió un problema al guardar.",
+      });
     } finally {
       setLoading(false);
     }
@@ -128,7 +133,7 @@ export default function CooperativaForm({ id }: { id?: string }) {
       <div className="p-20 flex flex-col items-center gap-4">
         <Loader2 className="animate-spin text-[#EA2264]" size={32} />
         <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
-          Cargando...
+          Cargando datos...
         </p>
       </div>
     );
@@ -138,9 +143,9 @@ export default function CooperativaForm({ id }: { id?: string }) {
       <button
         type="button"
         onClick={() => router.back()}
-        className="flex items-center gap-2 text-gray-400 hover:text-[#EA2264] text-[10px] font-black uppercase tracking-widest transition-all"
+        className="flex items-center gap-2 text-gray-400 hover:text-[#EA2264] text-[10px] font-black uppercase tracking-widest transition-all group"
       >
-        <ArrowLeft size={14} /> Volver
+        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Volver
       </button>
 
       <div className="bg-white p-8 md:p-12 rounded-[3rem] border border-gray-100 shadow-sm space-y-10">
@@ -149,12 +154,12 @@ export default function CooperativaForm({ id }: { id?: string }) {
           <div className="flex flex-col items-center gap-4 shrink-0">
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="w-44 h-44 bg-gray-50 rounded-[2.5rem] border-4 border-dashed border-gray-100 flex items-center justify-center cursor-pointer hover:border-[#EA2264]/30 transition-all overflow-hidden shadow-inner"
+              className="w-44 h-44 bg-gray-50 rounded-[2.5rem] border-4 border-dashed border-gray-100 flex items-center justify-center cursor-pointer hover:border-[#EA2264]/30 transition-all overflow-hidden shadow-inner group"
             >
               {imagePreview ? (
                 <img
                   src={imagePreview}
-                  className="w-full h-full object-contain p-6"
+                  className="w-full h-full object-contain p-6 group-hover:scale-105 transition-transform"
                   alt="Preview"
                 />
               ) : (
@@ -181,7 +186,6 @@ export default function CooperativaForm({ id }: { id?: string }) {
             />
           </div>
 
-          {/* INPUTS */}
           <div className="flex-1 space-y-8 w-full">
             <h3 className="text-2xl font-black text-[#09184D] uppercase italic flex items-center gap-3 tracking-tighter">
               <Building2 className="text-[#EA2264]" />{" "}
@@ -203,7 +207,7 @@ export default function CooperativaForm({ id }: { id?: string }) {
                       nombre_cooperativa: e.target.value,
                     })
                   }
-                  className="w-full bg-gray-50 border-none p-4 rounded-2xl font-bold text-[#09184D] focus:ring-2 ring-[#EA2264]/10 transition-all"
+                  className="w-full bg-gray-50 border-none p-4 rounded-2xl font-bold text-[#09184D] focus:ring-2 ring-[#EA2264]/10 transition-all outline-none"
                   placeholder="Ej: Transportes Ecuador"
                 />
               </div>
@@ -214,10 +218,7 @@ export default function CooperativaForm({ id }: { id?: string }) {
                     RUC / ID Legal
                   </label>
                   <div className="relative">
-                    <Hash
-                      size={14}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"
-                    />
+                    <Hash size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
                     <input
                       required
                       type="text"
@@ -225,7 +226,7 @@ export default function CooperativaForm({ id }: { id?: string }) {
                       onChange={(e) =>
                         setFormData({ ...formData, ruc: e.target.value })
                       }
-                      className="w-full bg-gray-50 border-none p-4 pl-12 rounded-2xl font-bold text-[#09184D] focus:ring-2 ring-[#EA2264]/10 transition-all"
+                      className="w-full bg-gray-50 border-none p-4 pl-12 rounded-2xl font-bold text-[#09184D] focus:ring-2 ring-[#EA2264]/10 transition-all outline-none"
                       placeholder="17900..."
                     />
                   </div>
@@ -235,17 +236,14 @@ export default function CooperativaForm({ id }: { id?: string }) {
                     Teléfono de Contacto
                   </label>
                   <div className="relative">
-                    <Phone
-                      size={14}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"
-                    />
+                    <Phone size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
                     <input
                       type="text"
                       value={formData.telefono}
                       onChange={(e) =>
                         setFormData({ ...formData, telefono: e.target.value })
                       }
-                      className="w-full bg-gray-50 border-none p-4 pl-12 rounded-2xl font-bold text-[#09184D] focus:ring-2 ring-[#EA2264]/10 transition-all"
+                      className="w-full bg-gray-50 border-none p-4 pl-12 rounded-2xl font-bold text-[#09184D] focus:ring-2 ring-[#EA2264]/10 transition-all outline-none"
                       placeholder="02-234..."
                     />
                   </div>
@@ -258,7 +256,7 @@ export default function CooperativaForm({ id }: { id?: string }) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-[#09184D] hover:bg-[#EA2264] text-white py-6 rounded-2xl font-black uppercase text-[10px] tracking-[0.4em] transition-all shadow-xl shadow-blue-900/10 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-[#09184D] hover:bg-[#EA2264] text-white py-6 rounded-2xl font-black uppercase text-[10px] tracking-[0.4em] transition-all shadow-xl shadow-blue-900/10 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
         >
           {loading ? (
             <Loader2 className="animate-spin" size={18} />

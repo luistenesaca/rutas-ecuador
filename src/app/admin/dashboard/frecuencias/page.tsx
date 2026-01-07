@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Plus,
   Search,
@@ -11,29 +12,49 @@ import {
   Loader2,
   Clock,
   MapPin,
-  Copy, // Añadido para la función de clonar
+  Copy,
+  Filter,
+  ChevronDown,
+  X,
+  Bus
 } from "lucide-react";
 
 export default function FrecuenciasAdmin() {
   const router = useRouter();
   const [frecuencias, setFrecuencias] = useState<any[]>([]);
+  const [cooperativas, setCooperativas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchFrecuencias = useCallback(async (isMounted: boolean) => {
+  // Filtros
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCooperativa, setSelectedCooperativa] = useState("");
+
+  // UI Dropdown Cooperativas
+  const [showCoopDropdown, setShowCoopDropdown] = useState(false);
+  const [coopSearchTerm, setCoopSearchTerm] = useState("");
+  const coopRef = useRef<HTMLDivElement>(null);
+
+  const fetchInitialData = useCallback(async (isMounted: boolean) => {
     setLoading(true);
     try {
+      // 1. Cargar Cooperativas para el filtro buscador
+      const { data: coops } = await supabase
+        .from("cooperativas")
+        .select("id, nombre_cooperativa")
+        .order("nombre_cooperativa");
+
+      if (isMounted) setCooperativas(coops || []);
+
+      // 2. Cargar Frecuencias con sus paradas
       const { data: frecs, error } = await supabase
         .from("frecuencias")
-        .select(`
+        .select(
+          `
           *, 
-          cooperativas(nombre_cooperativa),
-          paradas_frecuencia(
-            id, 
-            hora_estimada, 
-            orden
-          )
-        `)
+          cooperativas(id, nombre_cooperativa),
+          paradas_frecuencia(id, hora_estimada, orden)
+        `
+        )
         .order("id", { ascending: false });
 
       if (error) throw error;
@@ -41,8 +62,8 @@ export default function FrecuenciasAdmin() {
       if (isMounted && frecs) {
         const frecsProcesadas = frecs.map((f) => {
           const paradas = f.paradas_frecuencia || [];
+          // Buscamos la hora de la primera parada (orden 1)
           const paradaSalida = paradas.find((p: any) => p.orden === 1);
-
           let horaLimpia = "--:--";
           if (paradaSalida?.hora_estimada) {
             horaLimpia = paradaSalida.hora_estimada.slice(0, 5);
@@ -51,17 +72,14 @@ export default function FrecuenciasAdmin() {
           return {
             ...f,
             hora_salida_prioritaria: horaLimpia,
-            ruta_display: f.denominacion_ruta && f.denominacion_ruta.trim() !== "" 
-              ? f.denominacion_ruta 
-              : `RUTA #${f.id}`,
+            ruta_display: f.denominacion_ruta?.trim() || `RUTA #${f.id}`,
             num_paradas: paradas.length,
           };
         });
-
         setFrecuencias(frecsProcesadas);
       }
-    } catch (err) {
-      console.error("Error en fetch:", err);
+    } catch (err: any) {
+      toast.error("Error al cargar datos");
     } finally {
       if (isMounted) setLoading(false);
     }
@@ -69,33 +87,57 @@ export default function FrecuenciasAdmin() {
 
   useEffect(() => {
     let isMounted = true;
-    fetchFrecuencias(isMounted);
-    return () => { isMounted = false; };
-  }, [fetchFrecuencias]);
+    fetchInitialData(isMounted);
 
-  // FUNCIÓN PARA CLONAR
+    // Cerrar dropdown al hacer clic fuera
+    const handleClickOutside = (event: MouseEvent) => {
+      if (coopRef.current && !coopRef.current.contains(event.target as Node)) {
+        setShowCoopDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      isMounted = false;
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [fetchInitialData]);
+
   const clonarFrecuencia = (id: number) => {
-    // Redirige a la página de nueva frecuencia enviando el ID original como parámetro
     router.push(`/admin/dashboard/frecuencias/nueva?clonar=${id}`);
   };
 
   async function deleteFrecuencia(id: number) {
-    if (!confirm("¿Eliminar esta frecuencia?")) return;
+    if (!confirm("¿Eliminar esta frecuencia permanentemente?")) return;
     try {
-      const { error } = await supabase.from("frecuencias").delete().eq("id", id);
+      const { error } = await supabase
+        .from("frecuencias")
+        .delete()
+        .eq("id", id);
       if (error) throw error;
-      setFrecuencias(prev => prev.filter(f => f.id !== id));
+      setFrecuencias((prev) => prev.filter((f) => f.id !== id));
+      toast.success("Frecuencia eliminada");
     } catch (error) {
-      alert("Error al eliminar.");
+      toast.error("Error al eliminar");
     }
   }
 
+  // --- LÓGICA DE FILTRADO COMBINADA ---
+  const filteredCoopOptions = cooperativas.filter((c) =>
+    c.nombre_cooperativa.toLowerCase().includes(coopSearchTerm.toLowerCase())
+  );
+
+  const selectedCoopName = cooperativas.find(
+    (c) => c.id.toString() === selectedCooperativa
+  )?.nombre_cooperativa;
+
   const filteredFrecuencias = frecuencias.filter((f) => {
     const term = searchTerm.toLowerCase();
-    return (
-      f.cooperativas?.nombre_cooperativa?.toLowerCase().includes(term) ||
-      f.ruta_display?.toLowerCase().includes(term)
-    );
+    const matchText = f.ruta_display?.toLowerCase().includes(term);
+    const matchCooperativa = selectedCooperativa
+      ? f.cooperativa_id?.toString() === selectedCooperativa
+      : true;
+
+    return matchText && matchCooperativa;
   });
 
   return (
@@ -106,104 +148,196 @@ export default function FrecuenciasAdmin() {
           <h2 className="text-3xl font-black text-[#09184D] tracking-tighter italic uppercase">
             Control de <span className="text-[#EA2264]">Frecuencias</span>
           </h2>
-          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">Panel Administrativo</p>
+          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">
+            Panel Administrativo
+          </p>
         </div>
-        
         <button
           onClick={() => router.push("/admin/dashboard/frecuencias/nueva")}
-          className="bg-[#09184D] hover:bg-[#EA2264] transition-colors text-white px-6 py-3 rounded-xl font-bold uppercase text-[10px] tracking-widest flex items-center gap-2 shadow-sm"
+          className="bg-[#09184D] hover:bg-[#EA2264] transition-colors text-white px-6 py-3 rounded-xl font-bold uppercase text-[10px] tracking-widest flex items-center gap-2 shadow-xl"
         >
           <Plus size={16} strokeWidth={3} />
           Nueva Frecuencia
         </button>
       </div>
 
-      {/* BUSCADOR Y CONTADOR */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+      {/* ÁREA DE FILTROS AVANZADA */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+        {/* BUSCADOR POR TEXTO */}
+        <div className="relative md:col-span-7">
+          <Search
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"
+            size={18}
+          />
           <input
             type="text"
-            placeholder="Buscar por cooperativa o ruta..."
-            className="w-full bg-white border border-gray-200 py-2.5 pl-10 pr-4 rounded-xl text-sm font-medium text-[#09184D] outline-none focus:border-[#EA2264] transition-all placeholder:text-gray-300"
+            placeholder="Buscar por nombre de ruta..."
+            className="w-full bg-white border border-gray-100 py-4 pl-12 pr-4 rounded-2xl text-sm font-bold text-[#09184D] shadow-sm outline-none focus:ring-2 ring-[#EA2264]/10 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
-        <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] bg-gray-100 px-4 py-2 rounded-lg">
-          {filteredFrecuencias.length} Frecuencias encontradas
+
+        {/* BUSCADOR DE COOPERATIVA (Custom Dropdown) */}
+        <div className="relative md:col-span-5" ref={coopRef}>
+          <div
+            onClick={() => setShowCoopDropdown(!showCoopDropdown)}
+            className={`w-full bg-white border border-gray-100 py-4 px-5 rounded-2xl text-sm font-bold flex justify-between items-center cursor-pointer transition-all shadow-sm ${
+              selectedCooperativa ? "text-[#EA2264]" : "text-gray-400"
+            }`}
+          >
+            <div className="flex items-center gap-3 truncate">
+              <Bus size={16} />
+              <span className="truncate">
+                {selectedCoopName || "Filtrar por Cooperativa"}
+              </span>
+            </div>
+            {selectedCooperativa ? (
+              <X
+                size={16}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedCooperativa("");
+                }}
+                className="hover:text-red-500"
+              />
+            ) : (
+              <ChevronDown
+                size={16}
+                className={`transition-transform duration-300 ${
+                  showCoopDropdown ? "rotate-180" : ""
+                }`}
+              />
+            )}
+          </div>
+
+          {showCoopDropdown && (
+            <div className="absolute z-50 w-full mt-2 bg-white border border-gray-100 shadow-2xl rounded-2xl overflow-hidden">
+              <div className="p-3 border-b border-gray-50 bg-gray-50/50">
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Escribir nombre..."
+                  className="w-full p-2.5 bg-white rounded-xl text-xs font-bold outline-none border border-gray-100 focus:border-[#EA2264]/30"
+                  value={coopSearchTerm}
+                  onChange={(e) => setCoopSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="max-h-60 overflow-y-auto">
+                <div
+                  onClick={() => {
+                    setSelectedCooperativa("");
+                    setShowCoopDropdown(false);
+                  }}
+                  className="p-4 text-[10px] font-black uppercase text-gray-400 hover:bg-gray-50 cursor-pointer border-b border-gray-50"
+                >
+                  Mostrar todas
+                </div>
+                {filteredCoopOptions.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => {
+                      setSelectedCooperativa(c.id.toString());
+                      setShowCoopDropdown(false);
+                      setCoopSearchTerm("");
+                    }}
+                    className={`p-4 text-[10px] font-black uppercase tracking-widest transition-colors cursor-pointer hover:bg-[#09184D] hover:text-white ${
+                      selectedCooperativa === c.id.toString()
+                        ? "bg-[#EA2264]/5 text-[#EA2264]"
+                        : "text-[#09184D]"
+                    }`}
+                  >
+                    {c.nombre_cooperativa}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* TABLA */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-20 flex flex-col items-center justify-center gap-3">
             <Loader2 className="animate-spin text-[#EA2264]" size={32} />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-300">Cargando datos...</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-300">
+              Cargando datos...
+            </span>
+          </div>
+        ) : filteredFrecuencias.length === 0 ? (
+          <div className="p-20 text-center text-gray-400 font-bold uppercase text-[10px] tracking-widest">
+            No se encontraron frecuencias con los filtros aplicados
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100">
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Salida</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Ruta</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Operadora</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Servicio</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-center">Acciones</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                    Salida
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                    Ruta
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                    Operadora
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                    Servicio
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-center">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredFrecuencias.map((f) => (
-                  <tr key={f.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <tr
+                    key={f.id}
+                    className="hover:bg-gray-50/50 transition-colors group"
+                  >
                     <td className="px-6 py-5 font-bold text-[#09184D]">
                       <div className="flex items-center gap-2">
                         <Clock size={14} className="text-[#EA2264]" />
                         {f.hora_salida_prioritaria}
                       </div>
                     </td>
-
                     <td className="px-6 py-5">
                       <div className="text-sm font-bold text-[#09184D] uppercase">
                         {f.ruta_display}
                       </div>
                       <div className="flex items-center gap-1 text-[9px] text-gray-400 font-bold uppercase mt-0.5">
-                        <MapPin size={10} />
-                        {f.num_paradas} Paradas
+                        <MapPin size={10} /> {f.num_paradas} Paradas
                       </div>
                     </td>
-
                     <td className="px-6 py-5">
                       <span className="text-xs font-bold text-gray-600">
                         {f.cooperativas?.nombre_cooperativa || "---"}
                       </span>
                     </td>
-
                     <td className="px-6 py-5 text-xs font-bold text-gray-500 uppercase italic">
                       {f.tipo_servicio}
                     </td>
-
                     <td className="px-6 py-5">
                       <div className="flex justify-center gap-2">
-                        {/* BOTÓN CLONAR */}
                         <button
                           onClick={() => clonarFrecuencia(f.id)}
-                          title="Clonar Frecuencia"
                           className="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all"
                         >
                           <Copy size={16} />
                         </button>
-
                         <button
-                          onClick={() => router.push(`/admin/dashboard/frecuencias/editar/${f.id}`)}
+                          onClick={() =>
+                            router.push(
+                              `/admin/dashboard/frecuencias/editar/${f.id}`
+                            )
+                          }
                           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                         >
                           <Edit3 size={16} />
                         </button>
-                        
-                        <button 
+                        <button
                           onClick={() => deleteFrecuencia(f.id)}
                           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                         >
