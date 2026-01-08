@@ -97,14 +97,14 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#FDFDFD] font-sans selection:bg-[#EA2264]/20 overflow-x-hidden">
       {/* HEADER PRINCIPAL */}
-      <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-xl z-[100] border-b border-gray-100 h-20">
-        <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 bg-white z-[200] border-b border-gray-100 h-20">
+        <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between bg-white relative z-[210]">
           <div className="flex items-center gap-2 group cursor-pointer">
-            <div className="bg-[#EA2264] p-3 rounded-2xl shadow-lg group-hover:rotate-12 transition-transform">
+            <div className="bg-[#EA2264] p-3 rounded-2xl shadow-lg">
               <Bus className="text-white" size={28} />
             </div>
             <div className="text-left">
-              <h1 className="text-black font-black text-2xl tracking-tighter">
+              <h1 className="text-black font-black text-2xl tracking-tighter leading-none">
                 Rutas<span className="text-[#EA2264]">Ecuador</span>
               </h1>
               <p className="text-gray-700 text-[9px] font-black uppercase tracking-[0.3em] opacity-60">
@@ -115,90 +115,44 @@ export default function HomePage() {
 
           <nav className="hidden lg:flex items-center gap-10">
             {["Inicio", "Destinos", "Cooperativas", "Ayuda"].map((item) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                className="text-[11px] font-black uppercase tracking-widest text-gray-800 hover:text-[#EA2264] transition-colors"
-              >
+              <a key={item} href={`#${item.toLowerCase()}`} className="text-[11px] font-black uppercase tracking-widest text-gray-800 hover:text-[#EA2264]">
                 {item}
               </a>
             ))}
           </nav>
 
           <div className="flex items-center gap-4">
-            <button className="hidden md:block bg-[#09184D] text-white px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-[#EA2264] transition-all">
-              Empresas
-            </button>
-
-            {/* BOTÓN HAMBURGUESA */}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="lg:hidden p-2 text-[#09184D] z-[210] relative"
-            >
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2 text-[#09184D]">
               {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
             </button>
           </div>
         </div>
-      </header>
 
-      {/* MENÚ MÓVIL - CORREGIDO (Fuera del header para evitar transparencias heredadas) */}
-      <div
-        className={`fixed inset-0 bg-white z-[150] lg:hidden transition-transform duration-500 ease-in-out ${
-          isMenuOpen ? "translate-y-0" : "-translate-y-full"
-        }`}
-      >
-        <div className="flex flex-col h-full pt-28 pb-10 px-8 relative">
-          {/* Navegación principal */}
-          <nav className="flex flex-col gap-6">
-            {["Inicio", "Destinos", "Cooperativas", "Ayuda"].map(
-              (item, index) => (
+        {/* MENÚ MÓVIL DESPLEGABLE (Debajo del header) */}
+        <div
+          className={`absolute top-20 left-0 right-0 bg-white border-b border-gray-100 shadow-2xl lg:hidden transition-all duration-300 ease-in-out z-[190] ${
+            isMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10 pointer-events-none"
+          }`}
+        >
+          <div className="p-8 space-y-6">
+            <nav className="flex flex-col gap-4">
+              {["Inicio", "Destinos", "Cooperativas", "Ayuda"].map((item) => (
                 <a
                   key={item}
                   href={`#${item.toLowerCase()}`}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`text-4xl font-black text-[#09184D] tracking-tighter border-b border-gray-50 pb-4 flex justify-between items-center transition-all duration-700 ${
-                    isMenuOpen
-                      ? "translate-x-0 opacity-100"
-                      : "-translate-x-10 opacity-0"
-                  }`}
-                  style={{ transitionDelay: `${index * 100}ms` }}
+                  className="text-2xl font-black text-[#09184D] tracking-tighter flex justify-between items-center"
                 >
-                  {item}
-                  <span className="text-[#EA2264] text-xl">→</span>
+                  {item} <span className="text-[#EA2264]">→</span>
                 </a>
-              )
-            )}
-          </nav>
-
-          <div className="mt-auto space-y-4">
-            {/* BOTÓN DE SALIDA/CERRAR (Nuevo) */}
-            <button
-              onClick={() => setIsMenuOpen(false)}
-              className="w-full flex items-center justify-center gap-2 py-4 text-[#EA2264] font-bold uppercase text-[10px] tracking-[0.3em] hover:text-[#EA2264] transition-colors"
-            >
-              <X size={16} />
-              Cerrar Menú
-            </button>
-
-            {/* Tarjeta de Aliados */}
-            <div className="p-6 bg-gray-50 rounded-[2rem] border border-gray-100">
-              <p className="text-[#09184D] font-bold text-sm mb-1">
-                ¿Eres una cooperativa?
-              </p>
-              <p className="text-gray-400 text-xs mb-4">
-                Gestiona tus rutas y horarios con nosotros.
-              </p>
-              <button className="w-full bg-[#09184D] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-transform">
-                Acceso Aliados
-              </button>
-            </div>
-
-            <p className="text-center text-[10px] font-black uppercase tracking-[0.4em] text-gray-300">
-              Rutas Ecuador © 2025
-            </p>
+              ))}
+            </nav>
           </div>
         </div>
-      </div>
+      </header>
+
+    
+      
 
       <main className="pt-20">
         {/* HERO SECTION */}
@@ -223,9 +177,12 @@ export default function HomePage() {
             </div>
 
             {/* BUSCADOR */}
-            <div className="bg-white p-3 md:p-3 rounded-[2.5rem] md:rounded-full shadow-[0_30px_100px_rgba(0,0,0,0.4)]">
-              <div className="flex flex-col md:flex-row items-center gap-2">
-                <div className="flex flex-col md:flex-row flex-1 w-full relative">
+            <div className="bg-white p-3 md:p-3 rounded-[2.5rem] md:rounded-full shadow-[0_30px_100px_rgba(0,0,0,0.4)] relative">
+              <div className="flex flex-col md:flex-row items-center gap-2 relative">
+                
+                {/* Contenedor de Selectores */}
+                <div className="flex flex-col md:flex-row flex-1 w-full relative gap-1 md:gap-0">
+                  
                   <LocationSelector
                     type="origen"
                     query={queryOrigen}
@@ -237,6 +194,19 @@ export default function HomePage() {
                     otherId={idDestino}
                     puntos={puntos}
                   />
+
+                  {/* BOTÓN INTERCAMBIO MÓVIL (Centro derecho entre inputs) */}
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 md:hidden">
+                    <button
+                      onClick={handleInterchange}
+                      className="bg-gray-50 text-[#09184D] p-2.5 rounded-full shadow-md border border-gray-100 active:scale-90 active:bg-white transition-all"
+                      aria-label="Intercambiar origen y destino"
+                    >
+                      <ArrowUpDown size={18} strokeWidth={2.5} className="text-[#EA2264]" />
+                    </button>
+                  </div>
+
+                  {/* BOTÓN INTERCAMBIO DESKTOP (Centro absoluto) */}
                   <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 hidden md:block">
                     <button
                       onClick={handleInterchange}
@@ -245,6 +215,7 @@ export default function HomePage() {
                       <ArrowLeftRight size={20} strokeWidth={3} />
                     </button>
                   </div>
+
                   <LocationSelector
                     type="destino"
                     query={queryDestino}
@@ -257,6 +228,7 @@ export default function HomePage() {
                     puntos={puntos}
                   />
                 </div>
+
                 <button
                   onClick={handleSearch}
                   disabled={loadingSearch || !idOrigen || !idDestino}
