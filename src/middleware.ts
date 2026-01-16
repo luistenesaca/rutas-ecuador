@@ -49,5 +49,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: [
+    /*
+     * Coincidir con todas las rutas de dashboard y admin
+     */
+    '/dashboard/:path*',
+    '/admin/:path*',
+  ],
 }
